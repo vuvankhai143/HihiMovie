@@ -195,7 +195,7 @@
       <button class="btn small primary" type="button" id="ep-add">+ Thêm tập</button>
     </div>
     <div class="bulk" id="ep-bulk" hidden>
-      <div class="hint" style="margin-bottom:8px">Mỗi dòng một link, tự đặt tên Tập 1, Tập 2... Muốn tự đặt tên thì viết <code>Tên tập | link</code>.</div>
+      <div class="hint" style="margin-bottom:8px">Link Google Drive dán thẳng được (file phải bật chia sẻ "Bất kỳ ai có đường liên kết"). Mỗi dòng một link, tự đặt tên Tập 1, Tập 2... Muốn tự đặt tên thì viết <code>Tên tập | link</code>.</div>
       <textarea id="ep-bulk-text" placeholder="https://.../tap1.m3u8&#10;https://.../tap2.m3u8&#10;Tập đặc biệt | https://.../sp.mp4"></textarea>
       <div class="dlg-actions" style="margin-top:8px"><button class="btn small primary" type="button" id="ep-bulk-add">Thêm vào danh sách</button></div>
     </div>
@@ -259,6 +259,9 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const isHttp = (u) => /^https?:\/\//i.test(u);
+  // Link chia sẻ Google Drive -> link tải trực tiếp (app TV cũng tự đổi y như vậy khi phát).
+  const driveId = (u) => (u.match(/(?:drive|docs)\.google\.com\/file\/d\/([\w-]{10,})/) || u.match(/(?:drive|docs)\.google\.com\/(?:open|uc)\?(?:.*&)?id=([\w-]{10,})/) || [])[1];
+  const directUrl = (u) => { const id = driveId(u); return id ? `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t` : u; };
 
   const store = {
     get(k) { try { return localStorage.getItem('tvphim.' + k); } catch { return null; } },
@@ -562,6 +565,8 @@
   function stopPreview() { if (hls) { hls.destroy(); hls = null; } $('#preview-box').innerHTML = ''; }
   function preview(url) {
     stopPreview();
+    const isDrive = !!driveId(url || '');
+    url = directUrl(url || '');
     if (!isHttp(url)) { $('#movie-error').textContent = 'Tập này chưa có link hợp lệ'; $('#movie-error').hidden = false; return; }
     $('#movie-error').hidden = true;
     const box = $('#preview-box');
@@ -571,7 +576,9 @@
     }
     const v = document.createElement('video');
     v.controls = true; v.autoplay = true; v.muted = true; v.playsInline = true;
-    v.onerror = () => { box.insertAdjacentHTML('beforeend', '<div class="error">Trình duyệt không phát được link này (có thể do link lỗi, bị chặn truy cập từ web, hoặc định dạng như .mkv). TV có thể vẫn phát được.</div>'); };
+    v.onerror = () => { box.insertAdjacentHTML('beforeend', isDrive
+      ? '<div class="error">Không phát được file Google Drive này. Kiểm tra file đã bật chia sẻ <b>"Bất kỳ ai có đường liên kết"</b> chưa.</div>'
+      : '<div class="error">Trình duyệt không phát được link này (có thể do link lỗi, bị chặn truy cập từ web, hoặc định dạng như .mkv). TV có thể vẫn phát được.</div>'); };
     box.append(v);
     v.scrollIntoView({ block: 'nearest' });
     if (/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported() && !v.canPlayType('application/vnd.apple.mpegurl')) {
