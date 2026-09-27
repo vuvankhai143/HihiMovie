@@ -1,17 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-27T00:00:00.000Z",
-  "categories": ["Phim thử nghiệm"],
-  "movies": [
-    {
-      "id": "demo1",
-      "title": "Big Buck Bunny",
-      "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      "poster": "",
-      "category": "Phim thử nghiệm",
-      "year": "2008",
-      "description": "Video mẫu để kiểm tra app."
-    }
-  ],
+  "updatedAt": "2026-09-27T11:37:48.436Z",
+  "categories": [],
+  "movies": [],
   "playlists": []
 }
