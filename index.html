@@ -80,6 +80,23 @@
   dialog h2 { margin: 0 0 4px; font-size: 20px; }
   .dlg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
   .dlg-actions .left { margin-right: auto; }
+  dialog.wide { width: min(860px, calc(100vw - 24px)); }
+  .ep-head { display: flex; align-items: center; gap: 8px; margin-top: 22px; flex-wrap: wrap; }
+  .ep-head h3 { margin: 0 auto 0 0; font-size: 16px; }
+  .ep-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 40vh; overflow-y: auto; padding-right: 4px; }
+  .ep-row { display: grid; grid-template-columns: 28px minmax(90px, 160px) 1fr auto; gap: 8px; align-items: center; }
+  .ep-row .no { color: var(--muted); font-size: 13px; text-align: right; }
+  .ep-row input { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+  .ep-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .ep-row .tools { display: flex; gap: 4px; }
+  .ep-row .tools .btn { padding: 4px 9px; }
+  .ep-empty { color: var(--muted); font-size: 14px; padding: 14px; border: 1px dashed var(--line); border-radius: 8px; text-align: center; }
+  .bulk { margin-top: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .bulk textarea { width: 100%; min-height: 110px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  @media (max-width: 620px) {
+    .ep-row { grid-template-columns: 24px 1fr; }
+    .ep-row .url-in, .ep-row .tools { grid-column: 2; }
+  }
   video { width: 100%; margin-top: 12px; border-radius: 8px; background: #000; max-height: 300px; }
 
   .cats .row { padding: 10px 14px; }
@@ -160,27 +177,36 @@
   </main>
 </div>
 
-<dialog id="movie-dlg">
-  <form method="dialog" id="movie-form">
+<dialog id="movie-dlg" class="wide">
+  <form method="dialog" id="movie-form" novalidate>
     <h2 id="movie-dlg-title">Thêm phim</h2>
     <div class="field"><label for="m-title">Tên phim *</label><input id="m-title" required></div>
-    <div class="field">
-      <label for="m-url">Link video * (.m3u8, .mp4, .mkv...)</label>
-      <input id="m-url" type="url" required placeholder="https://...">
-    </div>
     <div class="field"><label for="m-poster">Link ảnh poster</label><input id="m-poster" type="url" placeholder="https://... (không bắt buộc)"></div>
     <div class="two">
-      <div class="field"><label for="m-category">Danh mục</label><input id="m-category" list="cat-list" placeholder="Ví dụ: Phim lẻ"></div>
+      <div class="field"><label for="m-category">Danh mục</label><input id="m-category" list="cat-list" placeholder="Ví dụ: Phim bộ, Phim lẻ, Hoạt hình"></div>
       <div class="field"><label for="m-year">Năm</label><input id="m-year" inputmode="numeric" maxlength="4"></div>
     </div>
     <datalist id="cat-list"></datalist>
     <div class="field"><label for="m-desc">Mô tả</label><textarea id="m-desc"></textarea></div>
+
+    <div class="ep-head">
+      <h3>Danh sách tập <span class="pill" id="ep-count">0</span></h3>
+      <button class="btn small" type="button" id="ep-bulk-toggle">Dán nhiều link</button>
+      <button class="btn small primary" type="button" id="ep-add">+ Thêm tập</button>
+    </div>
+    <div class="bulk" id="ep-bulk" hidden>
+      <div class="hint" style="margin-bottom:8px">Mỗi dòng một link, tự đặt tên Tập 1, Tập 2... Muốn tự đặt tên thì viết <code>Tên tập | link</code>.</div>
+      <textarea id="ep-bulk-text" placeholder="https://.../tap1.m3u8&#10;https://.../tap2.m3u8&#10;Tập đặc biệt | https://.../sp.mp4"></textarea>
+      <div class="dlg-actions" style="margin-top:8px"><button class="btn small primary" type="button" id="ep-bulk-add">Thêm vào danh sách</button></div>
+    </div>
+    <div class="ep-list" id="ep-list"></div>
+    <div class="hint" style="margin-top:8px">Phim lẻ chỉ cần 1 tập. Phim chưa có tập nào sẽ chưa hiện trên TV.</div>
+
     <div id="preview-box"></div>
     <div class="error" id="movie-error" hidden></div>
     <div class="dlg-actions">
-      <button class="btn left" type="button" id="preview-btn">Xem thử link</button>
       <button class="btn" type="button" data-close>Huỷ</button>
-      <button class="btn primary" type="submit">Lưu</button>
+      <button class="btn primary" type="submit">Lưu phim</button>
     </div>
   </form>
 </dialog>
@@ -270,6 +296,13 @@
   };
   const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, '')), (c) => c.charCodeAt(0)));
 
+  // Bản cũ: mỗi phim có 1 trường url. Bản mới: phim có danh sách tập (episodes).
+  function migrateMovie(m) {
+    if (Array.isArray(m.episodes)) return m;
+    const { url, ...rest } = m;
+    return { ...rest, episodes: url ? [{ id: newId(), name: 'Full', url }] : [] };
+  }
+
   const emptyData = () => ({ version: 1, updatedAt: new Date().toISOString(), categories: [], movies: [], playlists: [] });
 
   async function loadData() {
@@ -278,6 +311,7 @@
       const f = await gh(`/repos/${st.owner}/${st.repo}/contents/${FILE}?ref=${BRANCH}`);
       const text = f.content ? b64decode(f.content) : await (await fetch(f.download_url, { cache: 'no-store' })).text();
       st.data = { ...emptyData(), ...JSON.parse(text) };
+      st.data.movies = st.data.movies.map(migrateMovie);
       st.sha = f.sha;
     } catch (e) {
       if (e.status !== 404) throw e;
@@ -374,6 +408,7 @@
         <div class="body">
           <div class="title">${esc(m.title)}</div>
           <div class="meta">${esc([m.category, m.year].filter(Boolean).join(' · ') || 'Chưa phân loại')}</div>
+          <div class="meta" style="color:${m.episodes?.length ? 'var(--ok)' : 'var(--accent2)'}">${m.episodes?.length ? m.episodes.length + ' tập' : 'Chưa có tập'}</div>
         </div>
         <div class="actions">
           <button class="btn small" data-edit-movie="${esc(m.id)}">Sửa</button>
@@ -409,58 +444,136 @@
 
   // ---------- Movies ----------
   const movieDlg = $('#movie-dlg');
+  let draft = []; // danh sách tập đang sửa trong form
+
   function openMovie(m) {
     st.editId = m?.id || null;
     $('#movie-dlg-title').textContent = m ? 'Sửa phim' : 'Thêm phim';
     $('#m-title').value = m?.title || '';
-    $('#m-url').value = m?.url || '';
     $('#m-poster').value = m?.poster || '';
     $('#m-category').value = m?.category || $('#cat-filter').value || '';
     $('#m-year').value = m?.year || '';
     $('#m-desc').value = m?.description || '';
+    draft = (m?.episodes || []).map((e) => ({ ...e }));
+    $('#ep-bulk').hidden = true; $('#ep-bulk-text').value = '';
     $('#movie-error').hidden = true;
     stopPreview();
+    renderEpisodes();
     movieDlg.showModal();
   }
   $('#add-movie').addEventListener('click', () => openMovie(null));
   movieDlg.addEventListener('close', stopPreview);
 
+  function renderEpisodes(focusIndex) {
+    $('#ep-count').textContent = draft.length;
+    const box = $('#ep-list');
+    if (!draft.length) { box.innerHTML = '<div class="ep-empty">Chưa có tập nào. Bấm <b>+ Thêm tập</b> hoặc <b>Dán nhiều link</b>.</div>'; return; }
+    box.innerHTML = draft.map((e, i) => `
+      <div class="ep-row" data-i="${i}">
+        <span class="no">${i + 1}</span>
+        <input class="name-in" value="${esc(e.name)}" placeholder="Tên tập" aria-label="Tên tập ${i + 1}">
+        <input class="url-in" type="url" value="${esc(e.url)}" placeholder="https://... link video" aria-label="Link tập ${i + 1}">
+        <span class="tools">
+          <button class="btn small" type="button" data-ep="play" title="Xem thử">▶</button>
+          <button class="btn small" type="button" data-ep="up" title="Lên" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="btn small" type="button" data-ep="down" title="Xuống" ${i === draft.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="btn small danger" type="button" data-ep="del" title="Xoá tập">✕</button>
+        </span>
+      </div>`).join('');
+    if (focusIndex != null) {
+      const row = box.querySelector(`[data-i="${focusIndex}"]`);
+      row?.scrollIntoView({ block: 'nearest' });
+      row?.querySelector(draft[focusIndex].url ? '.name-in' : '.url-in')?.focus();
+    }
+  }
+
+  const nextName = () => 'Tập ' + (draft.length + 1);
+
+  $('#ep-list').addEventListener('input', (e) => {
+    const row = e.target.closest('.ep-row'); if (!row) return;
+    const ep = draft[Number(row.dataset.i)];
+    if (e.target.classList.contains('name-in')) ep.name = e.target.value;
+    if (e.target.classList.contains('url-in')) ep.url = e.target.value.trim();
+  });
+  $('#ep-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ep]'); if (!btn) return;
+    const i = Number(btn.closest('.ep-row').dataset.i);
+    const act = btn.dataset.ep;
+    if (act === 'play') return preview(draft[i].url);
+    if (act === 'del') draft.splice(i, 1);
+    if (act === 'up') [draft[i - 1], draft[i]] = [draft[i], draft[i - 1]];
+    if (act === 'down') [draft[i + 1], draft[i]] = [draft[i], draft[i + 1]];
+    renderEpisodes();
+  });
+  $('#ep-add').addEventListener('click', () => {
+    draft.push({ id: newId(), name: nextName(), url: '' });
+    renderEpisodes(draft.length - 1);
+  });
+  $('#ep-bulk-toggle').addEventListener('click', () => {
+    $('#ep-bulk').hidden = !$('#ep-bulk').hidden;
+    if (!$('#ep-bulk').hidden) $('#ep-bulk-text').focus();
+  });
+  $('#ep-bulk-add').addEventListener('click', () => {
+    const lines = $('#ep-bulk-text').value.split('\n').map((l) => l.trim()).filter(Boolean);
+    const bad = [];
+    let added = 0;
+    for (const line of lines) {
+      const bar = line.lastIndexOf('|');
+      const name = bar >= 0 ? line.slice(0, bar).trim() : '';
+      const url = (bar >= 0 ? line.slice(bar + 1) : line).trim();
+      if (!isHttp(url)) { bad.push(line); continue; }
+      draft.push({ id: newId(), name: name || nextName(), url });
+      added++;
+    }
+    $('#ep-bulk-text').value = bad.join('\n');
+    if (bad.length) { $('#movie-error').textContent = `Đã thêm ${added} tập. ${bad.length} dòng không phải link hợp lệ, còn giữ lại trong ô dán.`; $('#movie-error').hidden = false; }
+    else { $('#movie-error').hidden = true; $('#ep-bulk').hidden = true; }
+    renderEpisodes();
+  });
+
   $('#movie-form').addEventListener('submit', (e) => {
     e.preventDefault();
+    // Dòng chưa có link mà tên vẫn để mặc định ("Tập N" hoặc trống) thì bỏ qua.
+    const episodes = draft
+      .filter((ep) => (ep.url || '').trim() || !/^(tập \d+)?$/i.test((ep.name || '').trim()))
+      .map((ep, i) => ({ id: ep.id || newId(), name: (ep.name || '').trim() || 'Tập ' + (i + 1), url: (ep.url || '').trim() }));
     const m = {
       id: st.editId || newId(),
       title: $('#m-title').value.trim(),
-      url: $('#m-url').value.trim(),
       poster: $('#m-poster').value.trim(),
       category: $('#m-category').value.trim(),
       year: $('#m-year').value.trim(),
       description: $('#m-desc').value.trim(),
+      episodes,
     };
-    const err = !m.title ? 'Cần nhập tên phim' : !isHttp(m.url) ? 'Link video phải bắt đầu bằng http:// hoặc https://' : (m.poster && !isHttp(m.poster)) ? 'Link poster không hợp lệ' : '';
+    const badEp = episodes.findIndex((ep) => !isHttp(ep.url));
+    const err = !m.title ? 'Cần nhập tên phim'
+      : (m.poster && !isHttp(m.poster)) ? 'Link poster không hợp lệ'
+      : badEp >= 0 ? `"${episodes[badEp].name}" có link không hợp lệ (phải bắt đầu bằng http:// hoặc https://)` : '';
     if (err) { $('#movie-error').textContent = err; $('#movie-error').hidden = false; return; }
     const list = st.data.movies;
     const idx = list.findIndex((x) => x.id === m.id);
     if (idx >= 0) list[idx] = m; else list.unshift(m);
     movieDlg.close();
-    save((idx >= 0 ? 'sửa phim ' : 'thêm phim ') + m.title);
+    save((idx >= 0 ? 'sửa phim ' : 'thêm phim ') + m.title + ` (${episodes.length} tập)`);
   });
 
   let hls;
   function stopPreview() { if (hls) { hls.destroy(); hls = null; } $('#preview-box').innerHTML = ''; }
-  $('#preview-btn').addEventListener('click', () => {
+  function preview(url) {
     stopPreview();
-    const url = $('#m-url').value.trim();
-    if (!isHttp(url)) { $('#movie-error').textContent = 'Nhập link video trước'; $('#movie-error').hidden = false; return; }
+    if (!isHttp(url)) { $('#movie-error').textContent = 'Tập này chưa có link hợp lệ'; $('#movie-error').hidden = false; return; }
     $('#movie-error').hidden = true;
     const box = $('#preview-box');
     if (location.protocol === 'https:' && url.startsWith('http:')) {
-      box.innerHTML = '<div class="hint">Link http:// không xem thử được trên trang https, nhưng TV vẫn phát được.</div>';
+      box.innerHTML = '<div class="hint" style="margin-top:12px">Link http:// không xem thử được trên trang https, nhưng TV vẫn phát được.</div>';
       return;
     }
     const v = document.createElement('video');
     v.controls = true; v.autoplay = true; v.muted = true; v.playsInline = true;
     v.onerror = () => { box.insertAdjacentHTML('beforeend', '<div class="error">Trình duyệt không phát được link này (có thể do link lỗi, bị chặn truy cập từ web, hoặc định dạng như .mkv). TV có thể vẫn phát được.</div>'); };
     box.append(v);
+    v.scrollIntoView({ block: 'nearest' });
     if (/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported() && !v.canPlayType('application/vnd.apple.mpegurl')) {
       hls = new Hls();
       hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) v.onerror(); });
@@ -468,7 +581,7 @@
     } else {
       v.src = url;
     }
-  });
+  }
 
   // ---------- Playlists ----------
   const plDlg = $('#playlist-dlg');
