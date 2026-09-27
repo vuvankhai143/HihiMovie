@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-27T11:42:42.045Z",
+  "updatedAt": "2026-09-27T11:59:52.168Z",
   "categories": [
     "Phim bộ"
   ],
@@ -27,6 +27,11 @@
           "id": "mujr0cv56m072",
           "name": "Tập 3",
           "url": "https://drive.google.com/file/d/1dBQx9eP_pAOk6ZcDLQDEuLim3KbaWcmj/view?usp=sharing"
+        },
+        {
+          "id": "mujrnmh6qp48r",
+          "name": "Tập 4",
+          "url": "https://drive.google.com/file/d/1PsAutLOzZ_FvTS5liL_yDfvJkZ-RqCay/view?usp=sharing"
         }
       ]
     }
