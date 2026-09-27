@@ -549,10 +549,13 @@
       description: $('#m-desc').value.trim(),
       episodes,
     };
-    const badEp = episodes.findIndex((ep) => !isHttp(ep.url));
+    // Link Google Drive phải có mã file (…/file/d/<mã>/…), không phải chỉ drive.google.com.
+    const badEp = episodes.findIndex((ep) => !isHttp(ep.url) || (/(drive|docs)\.google\.com/.test(ep.url) && !driveId(ep.url)));
     const err = !m.title ? 'Cần nhập tên phim'
       : (m.poster && !isHttp(m.poster)) ? 'Link poster không hợp lệ'
-      : badEp >= 0 ? `"${episodes[badEp].name}" có link không hợp lệ (phải bắt đầu bằng http:// hoặc https://)` : '';
+      : badEp >= 0 ? (isHttp(episodes[badEp].url)
+        ? `"${episodes[badEp].name}": link Google Drive chưa đúng, hãy dán link chia sẻ đầy đủ của file (dạng drive.google.com/file/d/…)`
+        : `"${episodes[badEp].name}" có link không hợp lệ (phải bắt đầu bằng http:// hoặc https://)`) : '';
     if (err) { $('#movie-error').textContent = err; $('#movie-error').hidden = false; return; }
     const list = st.data.movies;
     const idx = list.findIndex((x) => x.id === m.id);
