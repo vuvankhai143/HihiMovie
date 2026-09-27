@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-27T11:42:24.231Z",
+  "updatedAt": "2026-09-27T11:42:42.045Z",
   "categories": [
     "Phim bộ"
   ],
@@ -13,6 +13,11 @@
       "year": "2025",
       "description": "Bộ phim \"Cô Đi Mà Lấy Chồng Tôi\" bản Nhật (Marry My Husband) là phiên bản chuyển thể lại từ bộ webtoon nổi tiếng của Hàn Quốc, kết hợp giữa yếu tố trả thù và chữa lành tâm lý.",
       "episodes": [
+        {
+          "id": "mujr1c896kmae",
+          "name": "Tập 3",
+          "url": "https://drive.google.com/"
+        },
         {
           "id": "mujr07ivd2box",
           "name": "Tập 2",
