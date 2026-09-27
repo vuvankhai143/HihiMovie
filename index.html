@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>TV Phim Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<style>
+  :root {
+    --bg: #111214; --panel: #1b1c1f; --panel2: #24262a; --line: #33363b;
+    --text: #eceef1; --muted: #9a9ea6; --accent: #e53935; --accent2: #ff6f60;
+    --ok: #66bb6a; --radius: 12px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--accent2); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+
+  header { position: sticky; top: 0; z-index: 5; background: rgba(17,18,20,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  header .wrap { display: flex; align-items: center; gap: 12px; padding-block: 12px; flex-wrap: wrap; }
+  .logo { font-weight: 800; font-size: 20px; color: var(--accent); margin-right: auto; }
+  .logo span { color: var(--text); font-weight: 600; }
+  .status { font-size: 13px; color: var(--muted); }
+  .status.saving { color: #ffb74d; } .status.ok { color: var(--ok); } .status.err { color: var(--accent2); }
+
+  .btn { border: 1px solid var(--line); background: var(--panel2); padding: 8px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: #555; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: #f44336; }
+  .btn.danger { color: var(--accent2); }
+  .btn.small { padding: 4px 10px; font-size: 13px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .tabs { display: flex; gap: 6px; margin: 20px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab { background: none; border: 0; padding: 10px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab .count { font-size: 12px; background: var(--panel2); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .toolbar input, .toolbar select { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; }
+  .toolbar input { flex: 1 1 200px; min-width: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+  .poster { aspect-ratio: 2 / 3; background: var(--panel2); display: grid; place-items: center; font-size: 44px; font-weight: 800; color: var(--accent); position: relative; }
+  .poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .card .body { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .card .title { font-weight: 600; line-height: 1.3; }
+  .card .meta { font-size: 12px; color: var(--muted); }
+  .card .actions { display: flex; gap: 6px; padding: 0 12px 12px; }
+  .card .actions .btn { flex: 1; }
+
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .row { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .row .grow { flex: 1 1 240px; min-width: 0; }
+  .row .url { font-size: 13px; color: var(--muted); word-break: break-all; }
+  .row.off { opacity: .55; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--panel2); color: var(--muted); }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 16px; border: 1px dashed var(--line); border-radius: var(--radius); }
+
+  .login { max-width: 460px; margin: 8vh auto 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  .login h1 { margin: 0 0 4px; color: var(--accent); }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .field label { font-size: 13px; color: var(--muted); }
+  .field input, .field select, .field textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .error { color: var(--accent2); font-size: 14px; margin-top: 10px; }
+  .two { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+  .two.eq { grid-template-columns: 1fr 1fr; }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(640px, calc(100vw - 24px)); max-height: calc(100vh - 24px); }
+  dialog::backdrop { background: rgba(0,0,0,.65); }
+  dialog form { padding: 22px; }
+  dialog h2 { margin: 0 0 4px; font-size: 20px; }
+  .dlg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+  .dlg-actions .left { margin-right: auto; }
+  video { width: 100%; margin-top: 12px; border-radius: 8px; background: #000; max-height: 300px; }
+
+  .cats .row { padding: 10px 14px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #2e3136; border: 1px solid var(--line); padding: 10px 18px; border-radius: 999px; z-index: 20; }
+  @media (max-width: 520px) { .two { grid-template-columns: 1fr; } .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+</style>
+</head>
+<body>
+
+<div id="login-view" hidden>
+  <div class="wrap">
+    <form class="login" id="login-form" hidden>
+      <h1>TV Phim Admin</h1>
+      <div class="hint">Đăng nhập để quản lý phim trên TV.</div>
+      <div class="field"><label for="in-user">Tên đăng nhập</label><input id="in-user" required autocomplete="username" autocapitalize="none"></div>
+      <div class="field"><label for="in-pass">Mật khẩu</label><input id="in-pass" type="password" required autocomplete="current-password"></div>
+      <div class="error" id="login-error" hidden></div>
+      <div class="dlg-actions"><button class="btn primary" type="submit" id="login-btn">Đăng nhập</button></div>
+    </form>
+
+    <form class="login" id="setup-form" hidden>
+      <h1>Thiết lập lần đầu</h1>
+      <div class="hint">Tạo tài khoản quản trị. Chỉ cần làm một lần, sau đó đăng nhập bằng tên và mật khẩu này trên mọi máy.</div>
+      <div class="field"><label for="su-user">Tên đăng nhập</label><input id="su-user" required autocomplete="username" autocapitalize="none" value="admin"></div>
+      <div class="two eq">
+        <div class="field"><label for="su-pass">Mật khẩu (tối thiểu 10 ký tự)</label><input id="su-pass" type="password" required minlength="10" autocomplete="new-password"></div>
+        <div class="field"><label for="su-pass2">Nhập lại mật khẩu</label><input id="su-pass2" type="password" required autocomplete="new-password"></div>
+      </div>
+      <div class="field">
+        <label for="su-token">GitHub token (chỉ nhập một lần)</label>
+        <input id="su-token" type="password" required placeholder="github_pat_..." autocomplete="off">
+        <div class="hint">Tạo tại <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained tokens</a>: Repository access chọn <b id="su-repo-name">repo này</b>, Permissions → <b>Contents: Read and write</b>. Token được mã hoá bằng mật khẩu của bạn trước khi lưu.</div>
+      </div>
+      <div class="error" id="setup-error" hidden></div>
+      <div class="dlg-actions"><button class="btn primary" type="submit" id="setup-btn">Tạo tài khoản</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="app-view" hidden>
+  <header>
+    <div class="wrap">
+      <div class="logo">TV Phim <span>Admin</span></div>
+      <span class="status" id="status"></span>
+      <button class="btn small" id="reload-btn" title="Tải lại dữ liệu từ GitHub">Tải lại</button>
+      <button class="btn small" id="password-btn">Đổi mật khẩu</button>
+      <button class="btn small" id="logout-btn">Đăng xuất</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="movies">Phim <span class="count" id="c-movies">0</span></button>
+      <button class="tab" data-tab="playlists">Playlist M3U <span class="count" id="c-playlists">0</span></button>
+      <button class="tab" data-tab="categories">Danh mục <span class="count" id="c-categories">0</span></button>
+    </nav>
+
+    <section id="tab-movies">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Tìm phim...">
+        <select id="cat-filter"><option value="">Tất cả danh mục</option></select>
+        <button class="btn primary" id="add-movie">+ Thêm phim</button>
+      </div>
+      <div id="movies"></div>
+    </section>
+
+    <section id="tab-playlists" hidden>
+      <div class="toolbar">
+        <div class="hint" style="flex:1 1 260px">Playlist M3U sẽ hiện trên TV như một mục riêng, phim trong playlist được chia theo nhóm (group-title).</div>
+        <button class="btn primary" id="add-playlist">+ Thêm playlist</button>
+      </div>
+      <div id="playlists" class="list"></div>
+    </section>
+
+    <section id="tab-categories" hidden>
+      <div class="toolbar"><div class="hint">Thứ tự danh mục ở đây là thứ tự hiển thị trên TV. Danh mục được tạo tự động khi thêm phim.</div></div>
+      <div id="categories" class="list cats"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="movie-dlg">
+  <form method="dialog" id="movie-form">
+    <h2 id="movie-dlg-title">Thêm phim</h2>
+    <div class="field"><label for="m-title">Tên phim *</label><input id="m-title" required></div>
+    <div class="field">
+      <label for="m-url">Link video * (.m3u8, .mp4, .mkv...)</label>
+      <input id="m-url" type="url" required placeholder="https://...">
+    </div>
+    <div class="field"><label for="m-poster">Link ảnh poster</label><input id="m-poster" type="url" placeholder="https://... (không bắt buộc)"></div>
+    <div class="two">
+      <div class="field"><label for="m-category">Danh mục</label><input id="m-category" list="cat-list" placeholder="Ví dụ: Phim lẻ"></div>
+      <div class="field"><label for="m-year">Năm</label><input id="m-year" inputmode="numeric" maxlength="4"></div>
+    </div>
+    <datalist id="cat-list"></datalist>
+    <div class="field"><label for="m-desc">Mô tả</label><textarea id="m-desc"></textarea></div>
+    <div id="preview-box"></div>
+    <div class="error" id="movie-error" hidden></div>
+    <div class="dlg-actions">
+      <button class="btn left" type="button" id="preview-btn">Xem thử link</button>
+      <button class="btn" type="button" data-close>Huỷ</button>
+      <button class="btn primary" type="submit">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="playlist-dlg">
+  <form method="dialog" id="playlist-form">
+    <h2 id="playlist-dlg-title">Thêm playlist</h2>
+    <div class="field"><label for="p-name">Tên hiển thị *</label><input id="p-name" required placeholder="Ví dụ: Kênh truyền hình"></div>
+    <div class="field"><label for="p-url">Link playlist M3U *</label><input id="p-url" type="url" required placeholder="https://.../playlist.m3u"></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:14px"><input type="checkbox" id="p-enabled" checked> Hiện trên TV</label>
+    <div class="error" id="playlist-error" hidden></div>
+    <div class="dlg-actions">
+      <button class="btn" type="button" data-close>Huỷ</button>
+      <button class="btn primary" type="submit">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="password-dlg">
+  <form method="dialog" id="password-form">
+    <h2>Đổi tài khoản / mật khẩu</h2>
+    <div class="field"><label for="pw-user">Tên đăng nhập</label><input id="pw-user" required autocomplete="username" autocapitalize="none"></div>
+    <div class="two eq">
+      <div class="field"><label for="pw-pass">Mật khẩu mới</label><input id="pw-pass" type="password" required minlength="10" autocomplete="new-password"></div>
+      <div class="field"><label for="pw-pass2">Nhập lại</label><input id="pw-pass2" type="password" required autocomplete="new-password"></div>
+    </div>
+    <div class="error" id="pw-error" hidden></div>
+    <div class="dlg-actions">
+      <button class="btn" type="button" data-close>Huỷ</button>
+      <button class="btn primary" type="submit">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirm-dlg">
+  <form method="dialog">
+    <h2 id="confirm-text">Xoá?</h2>
+    <div class="dlg-actions">
+      <button class="btn" value="no">Huỷ</button>
+      <button class="btn primary" value="yes">Xoá</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const FILE = 'data.json';
+  const BRANCH = 'main';
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const isHttp = (u) => /^https?:\/\//i.test(u);
+
+  const store = {
+    get(k) { try { return localStorage.getItem('tvphim.' + k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem('tvphim.' + k, v); } catch {} },
+    del(k) { try { localStorage.removeItem('tvphim.' + k); } catch {} },
+  };
+
+  const st = { owner: '', repo: '', token: '', data: null, sha: null, tab: 'movies', editId: null, saving: Promise.resolve() };
+
+  // ---------- GitHub API ----------
+  async function gh(path, opts = {}) {
+    const res = await fetch('https://api.github.com' + path, {
+      ...opts,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: 'Bearer ' + st.token,
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const err = new Error((await res.json().catch(() => ({}))).message || res.statusText);
+      err.status = res.status;
+      throw err;
+    }
+    return res.status === 204 ? null : res.json();
+  }
+
+  const b64encode = (str) => {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  };
+  const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, '')), (c) => c.charCodeAt(0)));
+
+  const emptyData = () => ({ version: 1, updatedAt: new Date().toISOString(), categories: [], movies: [], playlists: [] });
+
+  async function loadData() {
+    setStatus('Đang tải...', 'saving');
+    try {
+      const f = await gh(`/repos/${st.owner}/${st.repo}/contents/${FILE}?ref=${BRANCH}`);
+      const text = f.content ? b64decode(f.content) : await (await fetch(f.download_url, { cache: 'no-store' })).text();
+      st.data = { ...emptyData(), ...JSON.parse(text) };
+      st.sha = f.sha;
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      st.data = emptyData();
+      st.sha = null;
+    }
+    setStatus('Đã đồng bộ', 'ok');
+    render();
+  }
+
+  // Lưu tuần tự từng thay đổi: mỗi thao tác = 1 commit vào data.json.
+  function save(message) {
+    st.saving = st.saving.then(async () => {
+      setStatus('Đang lưu...', 'saving');
+      normalizeCategories();
+      st.data.updatedAt = new Date().toISOString();
+      const body = {
+        message: 'Admin: ' + message,
+        content: b64encode(JSON.stringify(st.data, null, 2) + '\n'),
+        branch: BRANCH,
+        ...(st.sha ? { sha: st.sha } : {}),
+      };
+      try {
+        const r = await gh(`/repos/${st.owner}/${st.repo}/contents/${FILE}`, { method: 'PUT', body: JSON.stringify(body) });
+        st.sha = r.content.sha;
+        setStatus('Đã lưu · TV sẽ thấy khi bấm Làm mới', 'ok');
+      } catch (e) {
+        if (e.status === 409 || e.status === 422) {
+          toast('Dữ liệu vừa bị sửa ở nơi khác. Đã tải lại bản mới nhất, hãy thao tác lại.');
+          await loadData();
+        } else {
+          setStatus('Lưu thất bại: ' + e.message, 'err');
+          toast('Lưu thất bại: ' + e.message);
+        }
+      }
+      render();
+    });
+    render();
+    return st.saving;
+  }
+
+  function normalizeCategories() {
+    const used = [...new Set(st.data.movies.map((m) => m.category).filter(Boolean))];
+    const ordered = st.data.categories.filter((c) => used.includes(c));
+    st.data.categories = [...ordered, ...used.filter((c) => !ordered.includes(c))];
+  }
+
+  // ---------- UI helpers ----------
+  function setStatus(text, cls) { const el = $('#status'); el.textContent = text; el.className = 'status ' + (cls || ''); }
+  let toastTimer;
+  function toast(msg) {
+    let el = $('.toast');
+    if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.append(el); }
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), 4000);
+  }
+  function confirmDlg(text) {
+    const dlg = $('#confirm-dlg');
+    $('#confirm-text').textContent = text;
+    dlg.returnValue = '';
+    dlg.showModal();
+    return new Promise((resolve) => dlg.addEventListener('close', () => resolve(dlg.returnValue === 'yes'), { once: true }));
+  }
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+
+  // ---------- Render ----------
+  function render() {
+    const d = st.data;
+    if (!d) return;
+    normalizeCategories();
+    $('#c-movies').textContent = d.movies.length;
+    $('#c-playlists').textContent = d.playlists.length;
+    $('#c-categories').textContent = d.categories.length;
+
+    const filter = $('#cat-filter');
+    const cur = filter.value;
+    filter.innerHTML = '<option value="">Tất cả danh mục</option>' + d.categories.map((c) => `<option>${esc(c)}</option>`).join('');
+    filter.value = d.categories.includes(cur) ? cur : '';
+    $('#cat-list').innerHTML = d.categories.map((c) => `<option value="${esc(c)}">`).join('');
+
+    renderMovies(); renderPlaylists(); renderCategories();
+  }
+
+  function renderMovies() {
+    const q = $('#search').value.trim().toLowerCase();
+    const cat = $('#cat-filter').value;
+    const items = st.data.movies.filter((m) => (!cat || m.category === cat) && (!q || m.title.toLowerCase().includes(q)));
+    const box = $('#movies');
+    if (!st.data.movies.length) { box.innerHTML = '<div class="empty">Chưa có phim nào. Bấm <b>+ Thêm phim</b> để bắt đầu.</div>'; return; }
+    if (!items.length) { box.innerHTML = '<div class="empty">Không tìm thấy phim phù hợp.</div>'; return; }
+    box.innerHTML = '<div class="grid">' + items.map((m) => `
+      <div class="card">
+        <div class="poster">${esc((m.title || '?')[0].toUpperCase())}${m.poster ? `<img src="${esc(m.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
+        <div class="body">
+          <div class="title">${esc(m.title)}</div>
+          <div class="meta">${esc([m.category, m.year].filter(Boolean).join(' · ') || 'Chưa phân loại')}</div>
+        </div>
+        <div class="actions">
+          <button class="btn small" data-edit-movie="${esc(m.id)}">Sửa</button>
+          <button class="btn small danger" data-del-movie="${esc(m.id)}">Xoá</button>
+        </div>
+      </div>`).join('') + '</div>';
+  }
+
+  function renderPlaylists() {
+    const box = $('#playlists');
+    if (!st.data.playlists.length) { box.innerHTML = '<div class="empty">Chưa có playlist nào.</div>'; return; }
+    box.innerHTML = st.data.playlists.map((p) => `
+      <div class="row ${p.enabled === false ? 'off' : ''}">
+        <div class="grow"><div class="title"><b>${esc(p.name)}</b> ${p.enabled === false ? '<span class="pill">Đang ẩn</span>' : ''}</div><div class="url">${esc(p.url)}</div></div>
+        <button class="btn small" data-toggle-pl="${esc(p.id)}">${p.enabled === false ? 'Hiện' : 'Ẩn'}</button>
+        <button class="btn small" data-edit-pl="${esc(p.id)}">Sửa</button>
+        <button class="btn small danger" data-del-pl="${esc(p.id)}">Xoá</button>
+      </div>`).join('');
+  }
+
+  function renderCategories() {
+    const box = $('#categories');
+    const cats = st.data.categories;
+    if (!cats.length) { box.innerHTML = '<div class="empty">Chưa có danh mục. Nhập danh mục khi thêm phim.</div>'; return; }
+    box.innerHTML = cats.map((c, i) => `
+      <div class="row">
+        <div class="grow"><b>${esc(c)}</b> <span class="pill">${st.data.movies.filter((m) => m.category === c).length} phim</span></div>
+        <button class="btn small" data-cat-up="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn small" data-cat-down="${i}" ${i === cats.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn small" data-cat-rename="${i}">Đổi tên</button>
+      </div>`).join('');
+  }
+
+  // ---------- Movies ----------
+  const movieDlg = $('#movie-dlg');
+  function openMovie(m) {
+    st.editId = m?.id || null;
+    $('#movie-dlg-title').textContent = m ? 'Sửa phim' : 'Thêm phim';
+    $('#m-title').value = m?.title || '';
+    $('#m-url').value = m?.url || '';
+    $('#m-poster').value = m?.poster || '';
+    $('#m-category').value = m?.category || $('#cat-filter').value || '';
+    $('#m-year').value = m?.year || '';
+    $('#m-desc').value = m?.description || '';
+    $('#movie-error').hidden = true;
+    stopPreview();
+    movieDlg.showModal();
+  }
+  $('#add-movie').addEventListener('click', () => openMovie(null));
+  movieDlg.addEventListener('close', stopPreview);
+
+  $('#movie-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const m = {
+      id: st.editId || newId(),
+      title: $('#m-title').value.trim(),
+      url: $('#m-url').value.trim(),
+      poster: $('#m-poster').value.trim(),
+      category: $('#m-category').value.trim(),
+      year: $('#m-year').value.trim(),
+      description: $('#m-desc').value.trim(),
+    };
+    const err = !m.title ? 'Cần nhập tên phim' : !isHttp(m.url) ? 'Link video phải bắt đầu bằng http:// hoặc https://' : (m.poster && !isHttp(m.poster)) ? 'Link poster không hợp lệ' : '';
+    if (err) { $('#movie-error').textContent = err; $('#movie-error').hidden = false; return; }
+    const list = st.data.movies;
+    const idx = list.findIndex((x) => x.id === m.id);
+    if (idx >= 0) list[idx] = m; else list.unshift(m);
+    movieDlg.close();
+    save((idx >= 0 ? 'sửa phim ' : 'thêm phim ') + m.title);
+  });
+
+  let hls;
+  function stopPreview() { if (hls) { hls.destroy(); hls = null; } $('#preview-box').innerHTML = ''; }
+  $('#preview-btn').addEventListener('click', () => {
+    stopPreview();
+    const url = $('#m-url').value.trim();
+    if (!isHttp(url)) { $('#movie-error').textContent = 'Nhập link video trước'; $('#movie-error').hidden = false; return; }
+    $('#movie-error').hidden = true;
+    const box = $('#preview-box');
+    if (location.protocol === 'https:' && url.startsWith('http:')) {
+      box.innerHTML = '<div class="hint">Link http:// không xem thử được trên trang https, nhưng TV vẫn phát được.</div>';
+      return;
+    }
+    const v = document.createElement('video');
+    v.controls = true; v.autoplay = true; v.muted = true; v.playsInline = true;
+    v.onerror = () => { box.insertAdjacentHTML('beforeend', '<div class="error">Trình duyệt không phát được link này (có thể do link lỗi, bị chặn truy cập từ web, hoặc định dạng như .mkv). TV có thể vẫn phát được.</div>'); };
+    box.append(v);
+    if (/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported() && !v.canPlayType('application/vnd.apple.mpegurl')) {
+      hls = new Hls();
+      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) v.onerror(); });
+      hls.loadSource(url); hls.attachMedia(v);
+    } else {
+      v.src = url;
+    }
+  });
+
+  // ---------- Playlists ----------
+  const plDlg = $('#playlist-dlg');
+  function openPlaylist(p) {
+    st.editId = p?.id || null;
+    $('#playlist-dlg-title').textContent = p ? 'Sửa playlist' : 'Thêm playlist';
+    $('#p-name').value = p?.name || '';
+    $('#p-url').value = p?.url || '';
+    $('#p-enabled').checked = p ? p.enabled !== false : true;
+    $('#playlist-error').hidden = true;
+    plDlg.showModal();
+  }
+  $('#add-playlist').addEventListener('click', () => openPlaylist(null));
+  $('#playlist-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const p = { id: st.editId || newId(), name: $('#p-name').value.trim(), url: $('#p-url').value.trim(), enabled: $('#p-enabled').checked };
+    const err = !p.name ? 'Cần nhập tên' : !isHttp(p.url) ? 'Link phải bắt đầu bằng http:// hoặc https://' : '';
+    if (err) { $('#playlist-error').textContent = err; $('#playlist-error').hidden = false; return; }
+    const list = st.data.playlists;
+    const idx = list.findIndex((x) => x.id === p.id);
+    if (idx >= 0) list[idx] = p; else list.push(p);
+    plDlg.close();
+    save((idx >= 0 ? 'sửa playlist ' : 'thêm playlist ') + p.name);
+  });
+
+  // ---------- Click actions ----------
+  document.addEventListener('click', async (e) => {
+    const t = e.target.closest('button');
+    if (!t || !st.data) return;
+    const d = st.data;
+    if (t.dataset.tab) {
+      st.tab = t.dataset.tab;
+      document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b === t));
+      ['movies', 'playlists', 'categories'].forEach((k) => ($('#tab-' + k).hidden = k !== st.tab));
+    } else if (t.dataset.editMovie) {
+      openMovie(d.movies.find((m) => m.id === t.dataset.editMovie));
+    } else if (t.dataset.delMovie) {
+      const m = d.movies.find((x) => x.id === t.dataset.delMovie);
+      if (m && await confirmDlg(`Xoá phim "${m.title}"?`)) { d.movies = d.movies.filter((x) => x !== m); save('xoá phim ' + m.title); }
+    } else if (t.dataset.editPl) {
+      openPlaylist(d.playlists.find((p) => p.id === t.dataset.editPl));
+    } else if (t.dataset.togglePl) {
+      const p = d.playlists.find((x) => x.id === t.dataset.togglePl);
+      p.enabled = p.enabled === false; save((p.enabled ? 'hiện ' : 'ẩn ') + 'playlist ' + p.name);
+    } else if (t.dataset.delPl) {
+      const p = d.playlists.find((x) => x.id === t.dataset.delPl);
+      if (p && await confirmDlg(`Xoá playlist "${p.name}"?`)) { d.playlists = d.playlists.filter((x) => x !== p); save('xoá playlist ' + p.name); }
+    } else if (t.dataset.catUp || t.dataset.catDown) {
+      const i = Number(t.dataset.catUp ?? t.dataset.catDown), j = t.dataset.catUp ? i - 1 : i + 1;
+      [d.categories[i], d.categories[j]] = [d.categories[j], d.categories[i]];
+      save('sắp xếp danh mục');
+    } else if (t.dataset.catRename) {
+      const old = d.categories[Number(t.dataset.catRename)];
+      const row = t.closest('.row');
+      row.innerHTML = `<form class="grow" style="display:flex;gap:8px;flex-wrap:wrap"><input class="field" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px" value="${esc(old)}" required><button class="btn small primary">Lưu</button><button class="btn small" type="button" data-cancel-rename>Huỷ</button></form>`;
+      const form = row.querySelector('form'); const input = form.querySelector('input'); input.focus(); input.select();
+      form.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const name = input.value.trim();
+        if (!name || name === old) return renderCategories();
+        d.movies.forEach((m) => { if (m.category === old) m.category = name; });
+        d.categories = d.categories.map((c) => (c === old ? name : c));
+        save(`đổi tên danh mục ${old} → ${name}`);
+      });
+    } else if ('cancelRename' in t.dataset) {
+      renderCategories();
+    }
+  });
+  $('#search').addEventListener('input', renderMovies);
+  $('#cat-filter').addEventListener('change', renderMovies);
+  $('#reload-btn').addEventListener('click', () => loadData().catch((e) => setStatus('Lỗi: ' + e.message, 'err')));
+  $('#logout-btn').addEventListener('click', () => { store.del('token'); location.replace(urlWithoutSetup()); });
+
+  // ---------- Tài khoản ----------
+  // Token GitHub được mã hoá AES-GCM bằng khoá sinh từ "tên đăng nhập + mật khẩu" (PBKDF2)
+  // và lưu ở auth.json. Sai tên hoặc mật khẩu thì không giải mã được.
+  const AUTH_FILE = 'auth.json';
+  const ITERATIONS = 600000;
+  const bytesToB64 = (u8) => btoa(String.fromCharCode(...u8));
+  const b64ToBytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+  async function deriveKey(user, pass, salt, iterations) {
+    const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(user.trim().toLowerCase() + '\n' + pass), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+
+  async function encryptToken(user, pass, token) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(user, pass, salt, ITERATIONS);
+    const data = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify({ token }))));
+    return { version: 1, kdf: 'PBKDF2-SHA256', iterations: ITERATIONS, salt: bytesToB64(salt), iv: bytesToB64(iv), data: bytesToB64(data) };
+  }
+
+  async function decryptToken(auth, user, pass) {
+    const key = await deriveKey(user, pass, b64ToBytes(auth.salt), auth.iterations);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(auth.iv) }, key, b64ToBytes(auth.data));
+    return JSON.parse(new TextDecoder().decode(plain)).token;
+  }
+
+  // Đọc auth.json công khai (không cần token): qua GitHub Pages, dự phòng qua API.
+  async function fetchAuth() {
+    if (location.hostname.endsWith('github.io')) {
+      const r = await fetch(AUTH_FILE + '?t=' + Date.now(), { cache: 'no-store' }).catch(() => null);
+      if (r?.ok) return r.json();
+    }
+    const r = await fetch(`https://api.github.com/repos/${st.owner}/${st.repo}/contents/${AUTH_FILE}?ref=${BRANCH}&t=${Date.now()}`, {
+      headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store',
+    });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('Không đọc được thông tin tài khoản (HTTP ' + r.status + ')');
+    return r.json();
+  }
+
+  async function saveAuth(user, pass) {
+    const auth = await encryptToken(user, pass, st.token);
+    let sha;
+    try { sha = (await gh(`/repos/${st.owner}/${st.repo}/contents/${AUTH_FILE}?ref=${BRANCH}`)).sha; } catch (e) { if (e.status !== 404) throw e; }
+    await gh(`/repos/${st.owner}/${st.repo}/contents/${AUTH_FILE}`, {
+      method: 'PUT',
+      body: JSON.stringify({ message: 'Admin: cập nhật tài khoản', content: b64encode(JSON.stringify(auth, null, 2) + '\n'), branch: BRANCH, ...(sha ? { sha } : {}) }),
+    });
+  }
+
+  function detectRepo() {
+    const q = new URLSearchParams(location.search);
+    if (q.get('owner') && q.get('repo')) return { owner: q.get('owner'), repo: q.get('repo') };
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+    if (!m) return { owner: '', repo: '' };
+    const seg = location.pathname.split('/').filter(Boolean)[0];
+    return { owner: m[1], repo: seg && !seg.endsWith('.html') ? seg : `${m[1]}.github.io` };
+  }
+
+  function urlWithoutSetup() {
+    const q = new URLSearchParams(location.search); q.delete('setup');
+    return location.pathname + (q.toString() ? '?' + q : '');
+  }
+
+  const showError = (sel, msg) => { $(sel).textContent = msg; $(sel).hidden = false; };
+
+  async function start() {
+    Object.assign(st, detectRepo());
+    if (!st.owner) {
+      $('#login-view').hidden = false; $('#login-form').hidden = false;
+      return showError('#login-error', 'Trang này cần được mở từ địa chỉ GitHub Pages (…github.io/tên-repo).');
+    }
+    st.token = store.get('token') || '';
+    if (st.token) {
+      try {
+        $('#app-view').hidden = false; $('#login-view').hidden = true;
+        return await loadData();
+      } catch (e) {
+        store.del('token'); st.token = '';
+        if (e.status !== 401) return showLoginView('login', 'Lỗi: ' + e.message);
+      }
+    }
+    try {
+      const forceSetup = new URLSearchParams(location.search).has('setup');
+      st.auth = forceSetup ? null : await fetchAuth();
+      showLoginView(st.auth ? 'login' : 'setup');
+    } catch (e) {
+      showLoginView('login', e.message);
+    }
+  }
+
+  function showLoginView(mode, error) {
+    $('#app-view').hidden = true; $('#login-view').hidden = false;
+    $('#login-form').hidden = mode !== 'login';
+    $('#setup-form').hidden = mode !== 'setup';
+    $('#su-repo-name').textContent = st.repo;
+    if (error) showError(mode === 'login' ? '#login-error' : '#setup-error', error);
+  }
+
+  $('#login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('#login-btn'); btn.disabled = true; btn.textContent = 'Đang kiểm tra...'; $('#login-error').hidden = true;
+    try {
+      if (!st.auth) st.auth = await fetchAuth();
+      if (!st.auth) return showLoginView('setup');
+      try {
+        st.token = await decryptToken(st.auth, $('#in-user').value, $('#in-pass').value);
+      } catch {
+        return showError('#login-error', 'Sai tên đăng nhập hoặc mật khẩu.');
+      }
+      store.set('token', st.token);
+      $('#in-pass').value = '';
+      $('#login-view').hidden = true; $('#app-view').hidden = false;
+      await loadData().catch((err) => {
+        store.del('token');
+        showLoginView('login', err.status === 401 ? 'Token GitHub đã hết hạn. Mở trang với ?setup để thiết lập lại.' : 'Lỗi: ' + err.message);
+      });
+    } finally { btn.disabled = false; btn.textContent = 'Đăng nhập'; }
+  });
+
+  $('#setup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('#setup-error').hidden = true;
+    const user = $('#su-user').value.trim(), pass = $('#su-pass').value;
+    if (pass !== $('#su-pass2').value) return showError('#setup-error', 'Hai lần nhập mật khẩu không khớp.');
+    const btn = $('#setup-btn'); btn.disabled = true; btn.textContent = 'Đang tạo...';
+    st.token = $('#su-token').value.trim();
+    try {
+      await saveAuth(user, pass);
+      store.set('token', st.token);
+      $('#su-token').value = ''; $('#su-pass').value = ''; $('#su-pass2').value = '';
+      history.replaceState(null, '', urlWithoutSetup());
+      $('#login-view').hidden = true; $('#app-view').hidden = false;
+      await loadData();
+      toast('Đã tạo tài khoản "' + user + '"');
+    } catch (err) {
+      st.token = '';
+      showError('#setup-error', err.status === 401 ? 'Token không đúng hoặc đã hết hạn.'
+        : err.status === 403 || err.status === 404 ? 'Token chưa được cấp quyền Contents: Read and write cho repo ' + st.repo + '.'
+        : err.message);
+    } finally { btn.disabled = false; btn.textContent = 'Tạo tài khoản'; }
+  });
+
+  $('#password-btn').addEventListener('click', () => {
+    $('#pw-error').hidden = true; $('#pw-pass').value = ''; $('#pw-pass2').value = '';
+    $('#password-dlg').showModal();
+  });
+  $('#password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if ($('#pw-pass').value !== $('#pw-pass2').value) return showError('#pw-error', 'Hai lần nhập mật khẩu không khớp.');
+    try {
+      await saveAuth($('#pw-user').value, $('#pw-pass').value);
+      st.auth = null;
+      $('#password-dlg').close();
+      toast('Đã đổi tài khoản / mật khẩu');
+    } catch (err) { showError('#pw-error', 'Lỗi: ' + err.message); }
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>
