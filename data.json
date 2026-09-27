@@ -1,7 +1,30 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-27T11:37:48.436Z",
-  "categories": [],
-  "movies": [],
+  "updatedAt": "2026-09-27T11:42:24.231Z",
+  "categories": [
+    "Phim bộ"
+  ],
+  "movies": [
+    {
+      "id": "mujr18110zuaf",
+      "title": "Cô Đi Mà Lấy Chồng Tôi",
+      "poster": "https://bazaarvietnam.vn/wp-content/uploads/2025/07/BZVN-co-di-ma-lay-chong-toi-marry-my-husband-ban-nhat-review00003.jpg",
+      "category": "Phim bộ",
+      "year": "2025",
+      "description": "Bộ phim \"Cô Đi Mà Lấy Chồng Tôi\" bản Nhật (Marry My Husband) là phiên bản chuyển thể lại từ bộ webtoon nổi tiếng của Hàn Quốc, kết hợp giữa yếu tố trả thù và chữa lành tâm lý.",
+      "episodes": [
+        {
+          "id": "mujr07ivd2box",
+          "name": "Tập 2",
+          "url": "https://drive.google.com/file/d/1FX5zc82WT2ZbwMc9LgLPy4tqfAfSdfOn/view?usp=sharing"
+        },
+        {
+          "id": "mujr0cv56m072",
+          "name": "Tập 3",
+          "url": "https://drive.google.com/file/d/1dBQx9eP_pAOk6ZcDLQDEuLim3KbaWcmj/view?usp=sharing"
+        }
+      ]
+    }
+  ],
   "playlists": []
 }
